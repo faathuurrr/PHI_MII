@@ -36,9 +36,19 @@ else if (companies == null || !companies.Any())
 }
 else
 {
-    @if (!string.IsNullOrEmpty(successMessage))
+@if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="alert-box alert-success">✅ @successMessage</div>
+        <div class="alert-box alert-success">
+            ✅ @successMessage
+            @if (!string.IsNullOrEmpty(lastApprovedId))
+            {
+                <div style="margin-top:0.5rem; font-size:0.8rem;">
+                    Vendor Company ID: <strong>@lastApprovedId</strong><br />
+                    Vendor perlu ke: <a href="/complete-profile?companyId=@lastApprovedId" target="_blank" style="color:#166534; text-decoration:underline;">/complete-profile</a>
+                    untuk isi profil.
+                </div>
+            }
+        </div>
     }
     <div class="table-card">
         <table class="data-table">
@@ -86,6 +96,7 @@ else
     private bool isLoading = true;
     private string errorMessage = "";
     private string successMessage = "";
+    private string lastApprovedId = "";
 
     protected override async Task OnInitializedAsync() => await LoadData();
 
@@ -94,6 +105,7 @@ else
         isLoading = true;
         errorMessage = "";
         successMessage = "";
+        lastApprovedId = "";
 
         try
         {
@@ -122,6 +134,7 @@ else
             if (resp.IsSuccessStatusCode)
             {
                 successMessage = approve ? "Registration approved!" : "Registration rejected.";
+                lastApprovedId = approve ? id.ToString() : "";
                 await LoadData();
             }
             else
@@ -138,3 +151,4 @@ else
     private record CompanyDto(Guid Id, string Name, string Email, string PhoneNumber,
         string RegistrationStatus, string VendorStatus, DateTime CreatedAt);
 }
+

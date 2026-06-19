@@ -1,0 +1,157 @@
+@page "/complete-profile"
+@layout EmptyLayout
+@inject HttpClient Http
+@inject NavigationManager Nav
+
+<PageTitle>Complete Vendor Profile — Supply Management</PageTitle>
+
+<div class="auth-bg">
+    <div class="poly-bg">
+        <svg class="poly-svg" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="0,900 280,400 560,750 800,200 1100,600 1440,100 1440,900" fill="#111827" opacity="0.9" />
+            <polygon points="0,900 200,500 500,800 750,300 1050,650 1440,200 1440,900" fill="#1e293b" opacity="0.7" />
+            <polygon points="0,900 150,600 400,850 700,400 1000,700 1300,300 1440,500 1440,900" fill="#0f172a" opacity="0.8" />
+        </svg>
+        <div class="line-grid"></div>
+    </div>
+
+    <div class="auth-card-wrapper" style="max-width: 500px;">
+        <div class="auth-card">
+            <div class="auth-logo">
+                <div class="logo-box">
+                    <span class="logo-text">Supply<span class="logo-accent">MS</span></span>
+                </div>
+                <h2 class="auth-title">Complete Vendor Profile</h2>
+                <p class="auth-subtitle">Your registration was approved! Please fill in your vendor details.</p>
+            </div>
+
+            @if (isSuccess)
+            {
+                <div class="auth-alert success">
+                    Profile submitted! Waiting for Logistic Manager approval.
+                </div>
+                <div style="text-align:center; margin-top: 1rem;">
+                    <a href="/" class="auth-link">Back to Login</a>
+                </div>
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="auth-alert">⚠️ @errorMessage</div>
+                }
+
+                <div class="auth-form">
+                    <div>
+                        <label class="field-label">Company ID <span style="color:#94a3b8;font-size:0.8rem;">(from registration email)</span></label>
+                        <div class="input-group-custom">
+                            <input type="text" class="auth-input" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                   @bind="companyId" @bind:event="oninput" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Business Sector</label>
+                        <div class="input-group-custom">
+                            <input type="text" class="auth-input" placeholder="e.g. Oil & Gas, Construction, IT"
+                                   @bind="businessSector" @bind:event="oninput" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="field-label">Company Type</label>
+                        <div class="input-group-custom">
+                            <select class="auth-input" @bind="companyType" style="cursor:pointer;">
+                                <option value="">-- Select Company Type --</option>
+                                <option value="PT">PT (Perseroan Terbatas)</option>
+                                <option value="CV">CV (Commanditaire Vennootschap)</option>
+                                <option value="UD">UD (Usaha Dagang)</option>
+                                <option value="Firma">Firma</option>
+                                <option value="Koperasi">Koperasi</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button class="btn-signin" @onclick="HandleSubmit" disabled="@isLoading">
+                        @if (isLoading)
+                        {
+                            <span class="spinner-sm"></span>
+                            <span>Submitting...</span>
+                        }
+                        else
+                        {
+                            <span>Submit Profile</span>
+                        }
+                    </button>
+                </div>
+
+                <div class="auth-footer">
+                    <span>Already registered?</span>
+                    <a href="/" class="auth-link">Sign In</a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private string companyId = "";
+    private string businessSector = "";
+    private string companyType = "";
+    private bool isLoading = false;
+    private bool isSuccess = false;
+    private string errorMessage = "";
+
+    [SupplyParameterFromQuery]
+    public string? CompanyIdParam { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(CompanyIdParam))
+            companyId = CompanyIdParam;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (string.IsNullOrWhiteSpace(companyId) || string.IsNullOrWhiteSpace(businessSector) || string.IsNullOrWhiteSpace(companyType))
+        {
+            errorMessage = "Semua field wajib diisi.";
+            return;
+        }
+
+        if (!Guid.TryParse(companyId.Trim(), out var parsedId))
+        {
+            errorMessage = "Format Company ID tidak valid.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            var payload = new { CompanyId = parsedId, BusinessSector = businessSector, CompanyType = companyType };
+            var response = await Http.PostAsJsonAsync($"/api/vendor/{parsedId}/complete-profile", payload);
+
+            if (response.IsSuccessStatusCode)
+            {
+                isSuccess = true;
+            }
+            else
+            {
+                var err = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                errorMessage = err?.Message ?? "Gagal submit profile. Pastikan Company ID benar dan registrasi sudah disetujui Admin.";
+            }
+        }
+        catch
+        {
+            errorMessage = "Tidak dapat menghubungi server.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private record ErrorResponse(string Message);
+}

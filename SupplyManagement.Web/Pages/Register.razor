@@ -15,20 +15,20 @@
         <div class="line-grid"></div>
     </div>
 
-    <div class="auth-card-wrapper">
-        <div class="auth-card" style="max-width: 480px;">
+    <div class="auth-card-wrapper" style="max-width: 520px;">
+        <div class="auth-card">
             <div class="auth-logo">
                 <div class="logo-box">
                     <span class="logo-text">Supply<span class="logo-accent">MS</span></span>
                 </div>
                 <h2 class="auth-title">Vendor Registration</h2>
-                <p class="auth-subtitle">Register your company to get started</p>
+                <p class="auth-subtitle">Fill in all details to register your company</p>
             </div>
 
             @if (isSuccess)
             {
                 <div class="auth-alert success">
-                    <span>✅</span> Registration submitted! Waiting for admin approval.
+                    ✅ Registration submitted! Please wait for Admin approval.
                 </div>
                 <div class="auth-footer" style="margin-top: 1.5rem;">
                     <a href="/" class="auth-link">← Back to Login</a>
@@ -38,31 +38,68 @@
             {
                 @if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    <div class="auth-alert">
-                        <span>⚠️</span> @errorMessage
-                    </div>
+                    <div class="auth-alert">⚠️ @errorMessage</div>
                 }
 
                 <div class="auth-form">
+                    <!-- Section: Company Info -->
+                    <div class="form-section-label">Company Information</div>
+
                     <div class="input-group-custom">
                         <span class="input-icon">🏢</span>
-                        <input type="text" class="auth-input" placeholder="Company Name" @bind="Name" />
+                        <input type="text" class="auth-input" placeholder="Company Name" @bind="Name" @bind:event="oninput" />
                     </div>
                     <div class="input-group-custom">
                         <span class="input-icon">✉️</span>
-                        <input type="email" class="auth-input" placeholder="Company Email" @bind="Email" />
+                        <input type="email" class="auth-input" placeholder="Company Email" @bind="Email" @bind:event="oninput" />
                     </div>
                     <div class="input-group-custom">
                         <span class="input-icon">📞</span>
-                        <input type="text" class="auth-input" placeholder="Phone Number" @bind="PhoneNumber" />
+                        <input type="text" class="auth-input" placeholder="Phone Number" @bind="PhoneNumber" @bind:event="oninput" />
+                    </div>
+
+                    <div class="input-group-custom">
+                        <select class="auth-input" @bind="CompanyType" style="cursor:pointer; padding-left:0.75rem;">
+                            <option value="">-- Company Type --</option>
+                            <option value="PT">PT (Perseroan Terbatas)</option>
+                            <option value="CV">CV (Commanditaire Vennootschap)</option>
+                            <option value="UD">UD (Usaha Dagang)</option>
+                            <option value="Firma">Firma</option>
+                            <option value="Koperasi">Koperasi</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group-custom">
+                        <span class="input-icon">🏭</span>
+                        <input type="text" class="auth-input" placeholder="Business Sector (e.g. Oil & Gas, IT)" @bind="BusinessSector" @bind:event="oninput" />
                     </div>
 
                     <div class="file-upload-box">
                         <span class="upload-label">
-                            @(selectedFile == null ? "Upload Company Photo / Logo" : selectedFile.Name)
+                            @(selectedFile == null ? "Upload Company Logo / Photo (optional)" : selectedFile.Name)
                         </span>
                         <InputFile OnChange="HandleFileSelected" accept=".jpg,.jpeg,.png" id="photoUpload" />
                         <label for="photoUpload" class="file-upload-trigger">Choose File</label>
+                    </div>
+
+                    <!-- Section: Account -->
+                    <div class="form-section-label" style="margin-top: 0.25rem;">Login Account</div>
+
+                    <div class="input-group-custom">
+                        <span class="input-icon">👤</span>
+                        <input type="text" class="auth-input" placeholder="Username" @bind="Username" @bind:event="oninput" />
+                    </div>
+                    <div class="input-group-custom">
+                        <span class="input-icon">🔒</span>
+                        <input type="@(showPass ? "text" : "password")" class="auth-input" placeholder="Password"
+                               @bind="Password" @bind:event="oninput" />
+                        <button class="toggle-password" @onclick="() => showPass = !showPass">@(showPass ? "🙈" : "👁️")</button>
+                    </div>
+                    <div class="input-group-custom">
+                        <span class="input-icon">🔒</span>
+                        <input type="@(showConfirm ? "text" : "password")" class="auth-input" placeholder="Confirm Password"
+                               @bind="ConfirmPassword" @bind:event="oninput" />
+                        <button class="toggle-password" @onclick="() => showConfirm = !showConfirm">@(showConfirm ? "🙈" : "👁️")</button>
                     </div>
 
                     <button class="btn-signin" @onclick="HandleSubmit" disabled="@isSubmitting">
@@ -91,21 +128,40 @@
     private string Name = "";
     private string Email = "";
     private string PhoneNumber = "";
+    private string BusinessSector = "";
+    private string CompanyType = "";
+    private string Username = "";
+    private string Password = "";
+    private string ConfirmPassword = "";
     private IBrowserFile? selectedFile;
     private bool isSubmitting = false;
     private bool isSuccess = false;
+    private bool showPass = false;
+    private bool showConfirm = false;
     private string errorMessage = "";
 
-    private void HandleFileSelected(InputFileChangeEventArgs e)
-    {
-        selectedFile = e.File;
-    }
+    private void HandleFileSelected(InputFileChangeEventArgs e) => selectedFile = e.File;
 
     private async Task HandleSubmit()
     {
-        if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(PhoneNumber))
+        if (string.IsNullOrWhiteSpace(Name) || string.IsNullOrWhiteSpace(Email) ||
+            string.IsNullOrWhiteSpace(PhoneNumber) || string.IsNullOrWhiteSpace(BusinessSector) ||
+            string.IsNullOrWhiteSpace(CompanyType) || string.IsNullOrWhiteSpace(Username) ||
+            string.IsNullOrWhiteSpace(Password))
         {
-            errorMessage = "Semua field harus diisi.";
+            errorMessage = "Semua field wajib diisi (kecuali foto).";
+            return;
+        }
+
+        if (Password != ConfirmPassword)
+        {
+            errorMessage = "Password dan Confirm Password tidak cocok.";
+            return;
+        }
+
+        if (Password.Length < 6)
+        {
+            errorMessage = "Password minimal 6 karakter.";
             return;
         }
 
@@ -118,6 +174,10 @@
             content.Add(new StringContent(Name), "Name");
             content.Add(new StringContent(Email), "Email");
             content.Add(new StringContent(PhoneNumber), "PhoneNumber");
+            content.Add(new StringContent(BusinessSector), "BusinessSector");
+            content.Add(new StringContent(CompanyType), "CompanyType");
+            content.Add(new StringContent(Username), "Username");
+            content.Add(new StringContent(Password), "Password");
 
             if (selectedFile != null)
             {
@@ -133,7 +193,8 @@
             }
             else
             {
-                errorMessage = "Gagal submit registrasi. Coba lagi.";
+                var err = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                errorMessage = err?.Message ?? "Gagal submit registrasi. Coba lagi.";
             }
         }
         catch
@@ -145,4 +206,6 @@
             isSubmitting = false;
         }
     }
+
+    private record ErrorResponse(string Message);
 }

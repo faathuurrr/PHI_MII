@@ -358,6 +358,28 @@ html, body {
     text-decoration: underline;
 }
 
+.field-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--clr-muted);
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.form-section-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--clr-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    border-bottom: 1.5px solid var(--clr-border);
+    padding-bottom: 0.4rem;
+    margin-bottom: 0.1rem;
+}
+
+
 /* ============================================
    UTILITIES
    ============================================ */
