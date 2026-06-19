@@ -1,0 +1,172 @@
+@page "/vendor"
+@layout MainLayout
+@inject HttpClient Http
+@inject AuthStateService AuthState
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.Authorization
+@using SupplyManagement.Web.Services
+@using System.Net.Http.Headers
+@using System.Security.Claims
+@using System.Text.Json
+@attribute [Authorize(Roles = "Vendor")]
+
+<PageTitle>Vendor Dashboard — Supply Management</PageTitle>
+
+@if (isLoading)
+{
+    <div class="loading-state">
+        <div class="spinner-lg"></div>
+        <p>Loading your dashboard...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert-box alert-error">⚠️ @errorMessage</div>
+}
+else if (companyData != null)
+{
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Welcome, @companyData.Name!</h1>
+            <p class="page-subtitle">Vendor Status: <span style="color:var(--clr-primary); font-weight:700;">@companyData.VendorStatus</span></p>
+        </div>
+    </div>
+
+    @if (companyData.RegistrationStatus == "Pending")
+    {
+        <div class="empty-state">
+            <div class="empty-icon">⏳</div>
+            <h3 style="margin-bottom:0.5rem;">Waiting for Admin Approval</h3>
+            <p>Your registration is currently under review by our Admin team.<br />Please check back later.</p>
+        </div>
+    }
+    
+    else if (companyData.RegistrationStatus == "ApprovedByAdmin" && companyData.VendorStatus == "PendingProfileCompletion")
+    {
+        <div class="alert-box alert-warning" style="margin-bottom: 2rem;">
+            <h3>⚠️ Action Required</h3>
+            <p>Your registration has been approved by the Admin! However, you need to complete your profile before a Logistic Manager can review it.</p>
+            <button class="btn-signin" style="max-width: 200px; margin-top: 1rem;" @onclick='() => Nav.NavigateTo("/complete-profile")'>
+                Complete Profile Now
+            </button>
+        </div>
+    }
+    
+    else if (companyData.VendorStatus == "ProfileSubmitted")
+    {
+        <div class="empty-state">
+            <div class="empty-icon">📬</div>
+            <h3 style="margin-bottom:0.5rem;">Profile Submitted</h3>
+            <p>Your profile has been submitted and is waiting for final approval from the Logistic Manager.</p>
+        </div>
+    }
+    
+    else if (companyData.RegistrationStatus == "Rejected" || companyData.VendorStatus == "Rejected")
+    {
+        <div class="empty-state" style="border-color: #ef4444;">
+            <div class="empty-icon">❌</div>
+            <h3 style="color:#ef4444; margin-bottom:0.5rem;">Application Rejected</h3>
+            <p>Unfortunately, your vendor application was rejected.</p>
+        </div>
+    }
+    
+    else if (companyData.VendorStatus == "ApprovedByManager")
+    {
+        <div class="table-card" style="padding: 2rem; text-align: center;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">Your Company is Now Approved</div>
+            <h2 style="color: #fff; margin-bottom: 1rem;">You are an Active Vendor!</h2>
+            <p style="color: #94a3b8; margin-bottom: 2rem;">You can now view and submit tenders for available projects.</p>
+            
+            <button class="btn-signin" style="max-width: 250px; margin: 0 auto;" @onclick="SimulateTenderSubmit">
+                Submit a Tender
+            </button>
+            @if (!string.IsNullOrEmpty(tenderMessage))
+            {
+                <div style="margin-top:1rem; color:var(--clr-primary);">✅ @tenderMessage</div>
+            }
+        </div>
+    }
+}
+
+@code {
+    private bool isLoading = true;
+    private string errorMessage = "";
+    private CompanyDto? companyData;
+    private string tenderMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        errorMessage = "";
+        tenderMessage = "";
+
+        try
+        {
+            var token = await AuthState.GetTokenAsync();
+            if (string.IsNullOrEmpty(token))
+            {
+                Nav.NavigateTo("/");
+                return;
+            }
+
+            var claims = ParseClaimsFromJwt(token);
+            var idClaim = claims.FirstOrDefault(c => c.Type == "nameid" || c.Type == ClaimTypes.NameIdentifier);
+            
+            if (idClaim == null)
+            {
+                errorMessage = "Invalid login session.";
+                return;
+            }
+
+            Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            companyData = await Http.GetFromJsonAsync<CompanyDto>($"/api/vendor/{idClaim.Value}");
+
+            if (companyData != null && 
+                companyData.RegistrationStatus == "ApprovedByAdmin" && 
+                companyData.VendorStatus == "PendingProfileCompletion")
+            {
+                Nav.NavigateTo("/complete-profile");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Gagal memuat profil vendor: " + ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private IEnumerable<Claim> ParseClaimsFromJwt(string jwt)
+    {
+        var payload = jwt.Split('.')[1];
+        var jsonBytes = ParseBase64WithoutPadding(payload);
+        var keyValuePairs = JsonSerializer.Deserialize<Dictionary<string, object>>(jsonBytes);
+        return keyValuePairs?.Select(kvp => new Claim(kvp.Key, kvp.Value?.ToString() ?? "")) ?? Array.Empty<Claim>();
+    }
+
+    private byte[] ParseBase64WithoutPadding(string base64)
+    {
+        switch (base64.Length % 4)
+        {
+            case 2: base64 += "=="; break;
+            case 3: base64 += "="; break;
+        }
+        return Convert.FromBase64String(base64);
+    }
+
+    private async Task SimulateTenderSubmit()
+    {
+        tenderMessage = "Tender successfully submitted!";
+        await Task.Delay(3000);
+        tenderMessage = "";
+    }
+
+    private record CompanyDto(Guid Id, string Name, string RegistrationStatus, string VendorStatus);
+}

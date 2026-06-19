@@ -14,16 +14,22 @@
             @if (currentRole == "Admin")
             {
                 <a href="/admin" class="nav-item @(IsActive("/admin") ? "active" : "")">
-                    <span class="nav-icon">📋</span> Vendor Approval
+                    Vendor Approval
                 </a>
                 <a href="/vendors" class="nav-item @(IsActive("/vendors") ? "active" : "")">
-                    <span class="nav-icon">🏢</span> All Vendors
+                    All Vendors
                 </a>
             }
             else if (currentRole == "LogisticManager")
             {
                 <a href="/manager" class="nav-item @(IsActive("/manager") ? "active" : "")">
-                    <span class="nav-icon">✅</span> Profile Approval
+                    Profile Approval
+                </a>
+            }
+            else if (currentRole == "Vendor")
+            {
+                <a href="/vendor" class="nav-item @(IsActive("/vendor") ? "active" : "")">
+                    Vendor Dashboard
                 </a>
             }
         </nav>
