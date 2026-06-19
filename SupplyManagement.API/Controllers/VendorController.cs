@@ -89,7 +89,6 @@ namespace SupplyManagement.API.Controllers
             }
         }
         [HttpPost("{id:guid}/complete-profile")]
-        [Authorize(Roles = "Admin,LogisticManager")]
         public async Task<IActionResult> CompleteProfile(Guid id, [FromBody] CompleteVendorProfileDto dto)
         {
             try
